@@ -37,6 +37,7 @@ multilevel_roi_align = spatial_ops.multilevel_roi_align
 native_crop_and_resize = spatial_ops.native_crop_and_resize
 
 
+
 def expanded_shape(orig_shape, start_dim, num_dims):
   """Inserts multiple ones into a shape vector.
 
@@ -765,6 +766,8 @@ def position_sensitive_crop_regions(image,
           tf.expand_dims(split, 0), box,
           tf.zeros(tf.shape(boxes)[0], dtype=tf.int32), bin_crop_size)
     image_crops.append(crop)
+  
+
 
   if global_pool:
     # Average over all bins.
