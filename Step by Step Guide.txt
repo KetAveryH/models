@@ -1,0 +1,35 @@
+https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/tf2.md
+
+cd models/research
+# Compile protos.
+!protoc object_detection/protos/*.proto --python_out=.
+# Install TensorFlow Object Detection API.
+!copy object_detection\packages\tf2\setup.py .
+!pip install .
+
+# Test the installation.
+python object_detection/builders/model_builder_tf2_test.py
+
+Should spit out proper ouputs, we can then try to run warn4collide.py
+
+cd ..
+cd ..
+
+run warn4collide.py
+
+We now run into 
+
+NotFoundError: NewRandomAccessFile failed to Create/Open: ../bigdata/data/mscoco_label_map.pbtxt : The system cannot find the path specified.
+; No such process
+
+This seems to be because I have not provided a set of labels PATH_TO_LABELS
+
+I am not sure what format these labels need to take on.
+
+I assigned arbitrary variables in the proper structure, I will most likely 
+need to look at the COCO dataset class variables in order to properly 
+generate a class set.
+
+Overall the code works well! I can switch models in and out, and I can 
+properly turn outputted jpg images into valid .mp4 files.
+

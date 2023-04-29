@@ -7,6 +7,8 @@ import imutils
 import time
 from sklearn.metrics import pairwise
 from imutils.video import FPS
+import pdb
+import jpgtomp4
 
 
 # sys.path.append('../../research')
@@ -20,14 +22,15 @@ font = cv2.FONT_HERSHEY_SIMPLEX
 
 utils_ops.tf = tf.compat.v1
 tf.gfile = tf.io.gfile
-PATH_TO_LABELS = '../bigdata/data/mscoco_label_map.pbtxt'
+PATH_TO_LABELS = 'C:/Users/holli/Desktop/Vehicle-Warning-Indicator-System/my_model/ssd_mobilenet_v1_0.75_depth_300x300_coco14_sync_2018_07_03/labels.pbtxt'
 category_index = label_map_util.create_category_index_from_labelmap(PATH_TO_LABELS, use_display_name=True)
 
 
 
 
-model_name = 'ssdlite_mobilenet_v2_coco_2018_05_09'
-model_dir =  "../bigdata/models/" + model_name + "/saved_model"
+model_name = 'ssd_mobilenet_v1_0.75_depth_300x300_coco14_sync_2018_07_03'
+#model_name = 'centernet_hg104_512x512_coco17_tpu-8'
+model_dir =  "my_model/" + model_name + "/saved_model"
 detection_model = tf.saved_model.load(str(model_dir))
 detection_model = detection_model.signatures['serving_default']
 
@@ -69,9 +72,9 @@ def estimate_collide(output_dict,height,width,image_np):
 
   if crash_count_frames > 0:
     if max_curr_obj_area <= 100000:
-      cv2.putText(image_np,"YOU ARE GETTING CLOSER" ,(50,50), font, 1.2,(255,255,0),2,cv2.LINE_AA)
+      cv2.putText(image_np,"YOU ARE GETTING CLOSER" ,(50,50), font, 1.2,(0,165,255),2,cv2.LINE_AA)
     elif max_curr_obj_area > 100000:
-      cv2.putText(image_np,"DON'T COLLIDE !!!" ,     (50,50), font, 1.2,(255,255,0),2,cv2.LINE_AA)
+      cv2.putText(image_np,"BRAKE BRAKE BRAKE!!" ,     (50,50), font, 1.2,(0,25,255),2,cv2.LINE_AA)
 
 
 
@@ -136,14 +139,17 @@ def show_inference(model, image_path):
 
 
 
-
-cap=cv2.VideoCapture('../videos/b.mp4')
+#pdb.set_trace()
+cap=cv2.VideoCapture('C:/Users/holli/Desktop/Vehicle-Warning-Indicator-System/videos/footage.mp4')
 time.sleep(2.0)
 
-cap.set(1,379*24)
 
-# fourcc = cv2.VideoWriter_fourcc(*'XVID')
-# out1 = cv2.VideoWriter('i.avi', fourcc, 3.0, (int(cap.get(3)),int(cap.get(4))))
+#cap.set(1,379*30)
+
+#fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+#out1 = cv2.VideoWriter('output.mp4', fourcc, 3.0, (int(cap.get(3)),int(cap.get(4))))
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+out1 = cv2.VideoWriter('videos/output.mp4', fourcc, 30, (int(cap.get(3)), int(cap.get(4))))
 
 fps = FPS().start()
 
@@ -155,28 +161,30 @@ while True:
     print(frame.shape)
     print(ctt)
     ctt = ctt + 1
-    if ctt==3334:
+    if ctt==350:
       break
     frame=show_inference(detection_model, frame)
 
 
+    
+    cv2.imwrite('videos/images/' + str(ctt) + '.jpg', frame)
     cv2.imshow("version", frame)
-    # out1.write(frame)
+    out1.write(frame)
     fps.update()
 
     key=cv2.waitKey(1)
     if key & 0xFF == ord("q"):
-        break
+      break
         
 # stop the timer and display FPS information
 fps.stop()
 print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
 print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
 cap.release()
-# out1.release()
+out1.release()
 cv2.destroyAllWindows() 
 
-
+jpgtomp4()
 
 
 
