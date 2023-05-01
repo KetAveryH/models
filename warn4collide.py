@@ -8,7 +8,8 @@ import time
 from sklearn.metrics import pairwise
 from imutils.video import FPS
 import pdb
-import jpgtomp4
+import re
+import time
 
 
 # sys.path.append('../../research')
@@ -22,14 +23,18 @@ font = cv2.FONT_HERSHEY_SIMPLEX
 
 utils_ops.tf = tf.compat.v1
 tf.gfile = tf.io.gfile
-PATH_TO_LABELS = 'C:/Users/holli/Desktop/Vehicle-Warning-Indicator-System/my_model/ssd_mobilenet_v1_0.75_depth_300x300_coco14_sync_2018_07_03/labels.pbtxt'
+PATH_TO_LABELS = 'C:/Users/holli/Desktop/Vehicle-Warning-Indicator-System/my_model/labels.pbtxt'
 category_index = label_map_util.create_category_index_from_labelmap(PATH_TO_LABELS, use_display_name=True)
 
+#model_name = 'centernet_mobilenetv2_fpn_od'  DOESN'T RUN, wrong model output format
+#model_name = 'centernet_mobilenetv2_fpn_od'  DOESN'T RUN, 
+#model_name = 'ssd_mobilenet_v3_large_coco_2020_01_14' DOESN'T RUN
 
 
-
-model_name = 'ssd_mobilenet_v1_0.75_depth_300x300_coco14_sync_2018_07_03'
+#model_name = 'ssd_mobilenet_v1_0.75_depth_300x300_coco14_sync_2018_07_03'
 #model_name = 'centernet_hg104_512x512_coco17_tpu-8'
+model_name = 'ssdlite_mobilenet_v2_coco_2018_05_09'
+#model_name = 'ssd_mobilenet_v2_coco_2018_03_29'
 model_dir =  "my_model/" + model_name + "/saved_model"
 detection_model = tf.saved_model.load(str(model_dir))
 detection_model = detection_model.signatures['serving_default']
@@ -58,7 +63,7 @@ def estimate_collide(output_dict,height,width,image_np):
           max_curr_obj_area = obj_area
           details = [ymin, xmin, ymax, xmax]
 
-  print(max_curr_obj_area)
+  #print(max_curr_obj_area)
   centerX , centerY = (details[1] + details[3])/2 , (details[0] + details[2])/2
   if max_curr_obj_area>70000:
     if (centerX < 0.2 and details[2] > 0.9) or (0.2 <= centerX <= 0.8) or (centerX > 0.8 and details[2] > 0.9):
@@ -69,11 +74,14 @@ def estimate_collide(output_dict,height,width,image_np):
     crash_count_frames = crash_count_frames - 1
     
   # cv2.putText(image_np, "{}  {}  {}  ".format(str(centerX)[:6],str(details[2])[:6],max_curr_obj_area) ,(50,100), font, 1.2,(255,255,0),2,cv2.LINE_AA)
-
+  #print('1')
   if crash_count_frames > 0:
-    if max_curr_obj_area <= 100000:
+    if max_curr_obj_area <= 10000:
+      print("YOU ARE GETTING CLOSER")
       cv2.putText(image_np,"YOU ARE GETTING CLOSER" ,(50,50), font, 1.2,(0,165,255),2,cv2.LINE_AA)
-    elif max_curr_obj_area > 100000:
+    elif max_curr_obj_area > 10000:
+    #FOR CROPPED IMAGES #elif max_curr_obj_area > 300000 
+      print("BRAKE BRAKE BRAKE!!")
       cv2.putText(image_np,"BRAKE BRAKE BRAKE!!" ,     (50,50), font, 1.2,(0,25,255),2,cv2.LINE_AA)
 
 
@@ -135,6 +143,39 @@ def show_inference(model, image_path):
 
 
 
+def extract_number(filename):
+    return int(re.search(r'\d+', filename).group())
+
+
+def jpgtomp4():
+  # Specify the directory containing the JPEG images
+  image_folder = 'videos/images'
+  video_name = 'videos/output.mp4'
+
+  # Retrieve the image files from the folder
+  images = [img for img in os.listdir(image_folder) if img.endswith(".jpg")]
+  # Sort the images by their name to ensure they are in the correct order
+  #images.sort()
+  images = sorted(images, key=extract_number)
+
+  # Read the first image to get its dimensions
+  sample_image = cv2.imread(os.path.join(image_folder, images[0]))
+  height, width, layers = sample_image.shape
+
+  # Define the codec and create the VideoWriter object
+  fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+  video = cv2.VideoWriter(video_name, fourcc, 30, (width, height))
+
+  # Loop through the images and add them to the video
+  for image in images:
+      img_path = os.path.join(image_folder, image)
+      frame = cv2.imread(img_path)
+      video.write(frame)
+
+  # Release the VideoWriter object
+  video.release()
+
+
 
 
 
@@ -153,36 +194,46 @@ out1 = cv2.VideoWriter('videos/output.mp4', fourcc, 30, (int(cap.get(3)), int(ca
 
 fps = FPS().start()
 
+inference_times = []
+
+
 ctt = 0
 while True:
     (grabbed, frame) = cap.read()
-    print('frame',frame.shape)
+    #print('frame',frame.shape)
     frame = frame[ :-150, : , :]
-    print(frame.shape)
-    print(ctt)
+    #print(frame.shape)
+    #print(ctt)
     ctt = ctt + 1
     if ctt==350:
       break
-    frame=show_inference(detection_model, frame)
 
+    start_time = time.time()
+
+    frame=show_inference(detection_model, frame)
+    end_time = time.time()
+    inference_times += [end_time - start_time]
+    
+    
 
     
     cv2.imwrite('videos/images/' + str(ctt) + '.jpg', frame)
-    cv2.imshow("version", frame)
+    #cv2.imshow("version", frame)
     out1.write(frame)
     fps.update()
-
-    key=cv2.waitKey(1)
-    if key & 0xFF == ord("q"):
-      break
+    #key=cv2.waitKey(1)
+    #if key & 0xFF == ord("q"):
+    #  break
         
 # stop the timer and display FPS information
 fps.stop()
 print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
 print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
+print('avg inference time:', np.mean(inference_times))
 cap.release()
 out1.release()
 cv2.destroyAllWindows() 
+
 
 jpgtomp4()
 

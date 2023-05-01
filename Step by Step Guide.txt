@@ -33,3 +33,6 @@ generate a class set.
 Overall the code works well! I can switch models in and out, and I can 
 properly turn outputted jpg images into valid .mp4 files.
 
+_______________________
+Was not able to get to run on GPU, test to see how much it improves output
+
